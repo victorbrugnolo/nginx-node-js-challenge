@@ -1,0 +1,42 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql:5.7.37
+    container_name: mysql-db
+    volumes:
+      - ./data/:/tmp/data/
+    command: --init-file /tmp/data/init.sql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - challenge_net
+
+  app: 
+    build: ./app
+    image: victorbrugnolo/node:prod
+    container_name: node-simple-app
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s node server.js
+    networks:
+      - challenge_net
+    depends_on:
+      - db
+  
+  proxy:
+    build: ./nginx
+    image: victorbrugnolo/nginx:prod
+    container_name: nginx-node-proxy
+    entrypoint: dockerize -wait tcp://app:3000 -timeout 20s nginx -g 'daemon off;'
+    ports:
+      - "8080:80"
+    networks:
+      - challenge_net
+  
+networks:
+  challenge_net:
+    driver: bridge
+
+
+
+      
